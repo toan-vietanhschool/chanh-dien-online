@@ -1,0 +1,48 @@
+{
+ "tag": {
+  "src": "tag.webp",
+  "slice": [47,51,47,51],
+  "pad": [47,51,47,51],
+  "scale": 0.5
+ },
+ "tag_s": {
+  "src": "tag_s.webp",
+  "slice": [43,45,41,45],
+  "pad": [43,27,41,27],
+  "scale": 0.5
+ },
+ "bubble": {
+  "src": "bubble.webp",
+  "slice": [43,59,42,59],
+  "pad": [43,59,42,59],
+  "scale": 0.5,
+  "parts": {
+   "tail": {
+    "src": "bubble_tail.webp",
+    "ay": 4
+   }
+  }
+ },
+ "banner": {
+  "src": "banner.webp",
+  "slice": [153,195,148,195],
+  "pad": [19,20,19,20],
+  "scale": 0.67,
+  "parts": {
+   "crestTop": {
+    "src": "banner_crest_top.webp",
+    "ay": 31
+   },
+   "crestBottom": {
+    "src": "banner_crest_bottom.webp",
+    "ay": 44
+   }
+  }
+ },
+ "card": {
+  "src": "card.webp",
+  "slice": [157,167,158,167],
+  "pad": [29,30,29,30],
+  "scale": 0.5
+ }
+}

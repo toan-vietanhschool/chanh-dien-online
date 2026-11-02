@@ -1,0 +1,14 @@
+{
+  "name": "chanh-dien-sprites",
+  "private": true,
+  "type": "module",
+  "description": "Dev-only tool: generate sprite strips with Codex and post-process them into sheets.",
+  "scripts": {
+    "gen": "node gen.mjs",
+    "build": "node build.mjs",
+    "test": "node --test test/lib.test.mjs"
+  },
+  "dependencies": {
+    "sharp": "0.35.5"
+  }
+}

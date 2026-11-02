@@ -1,0 +1,340 @@
+{
+  "version": 2,
+  "cell": [
+    192,
+    256
+  ],
+  "anchor": [
+    112,
+    234
+  ],
+  "alias": {
+    "master": "monk"
+  },
+  "skins": {
+    "man": {
+      "src": "man.webp",
+      "seatH": 161,
+      "actions": {
+        "walk_back": {
+          "row": 0,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "walk_side": {
+          "row": 1,
+          "frames": 6,
+          "stride": 30,
+          "loop": true
+        },
+        "walk_front": {
+          "row": 2,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "sit_down": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8
+        },
+        "idle": {
+          "row": 4,
+          "frames": 1,
+          "loop": true
+        },
+        "bow": {
+          "row": 5,
+          "frames": 6,
+          "fps": 8,
+          "yoyo": true,
+          "hold": 0.6
+        },
+        "thank": {
+          "row": 6,
+          "frames": 4,
+          "fps": 6,
+          "yoyo": true,
+          "hold": 0.8
+        },
+        "stand_up": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8,
+          "reverse": true
+        }
+      }
+    },
+    "woman": {
+      "src": "woman.webp",
+      "seatH": 191,
+      "actions": {
+        "walk_back": {
+          "row": 0,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "walk_side": {
+          "row": 1,
+          "frames": 6,
+          "stride": 30,
+          "loop": true
+        },
+        "walk_front": {
+          "row": 2,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "sit_down": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8
+        },
+        "idle": {
+          "row": 4,
+          "frames": 1,
+          "loop": true
+        },
+        "bow": {
+          "row": 5,
+          "frames": 6,
+          "fps": 8,
+          "yoyo": true,
+          "hold": 0.6
+        },
+        "thank": {
+          "row": 6,
+          "frames": 4,
+          "fps": 6,
+          "yoyo": true,
+          "hold": 0.8
+        },
+        "stand_up": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8,
+          "reverse": true
+        }
+      }
+    },
+    "granny": {
+      "src": "granny.webp",
+      "seatH": 173,
+      "actions": {
+        "walk_back": {
+          "row": 0,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "walk_side": {
+          "row": 1,
+          "frames": 6,
+          "stride": 30,
+          "loop": true
+        },
+        "walk_front": {
+          "row": 2,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "sit_down": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8
+        },
+        "idle": {
+          "row": 4,
+          "frames": 1,
+          "loop": true
+        },
+        "bow": {
+          "row": 5,
+          "frames": 6,
+          "fps": 8,
+          "yoyo": true,
+          "hold": 0.6
+        },
+        "thank": {
+          "row": 6,
+          "frames": 4,
+          "fps": 6,
+          "yoyo": true,
+          "hold": 0.8
+        },
+        "stand_up": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8,
+          "reverse": true
+        }
+      }
+    },
+    "monk": {
+      "src": "monk.webp",
+      "seatH": 150,
+      "actions": {
+        "walk_back": {
+          "row": 0,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "walk_side": {
+          "row": 1,
+          "frames": 6,
+          "stride": 30,
+          "loop": true
+        },
+        "walk_front": {
+          "row": 2,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "sit_down": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8
+        },
+        "idle": {
+          "row": 4,
+          "frames": 1,
+          "loop": true
+        },
+        "bow": {
+          "row": 5,
+          "frames": 6,
+          "fps": 8,
+          "yoyo": true,
+          "hold": 0.6
+        },
+        "thank": {
+          "row": 6,
+          "frames": 4,
+          "fps": 6,
+          "yoyo": true,
+          "hold": 0.8
+        },
+        "stand_up": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8,
+          "reverse": true
+        }
+      }
+    },
+    "nun": {
+      "src": "nun.webp",
+      "seatH": 164,
+      "actions": {
+        "walk_back": {
+          "row": 0,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "walk_side": {
+          "row": 1,
+          "frames": 6,
+          "stride": 30,
+          "loop": true
+        },
+        "walk_front": {
+          "row": 2,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "sit_down": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8
+        },
+        "idle": {
+          "row": 4,
+          "frames": 1,
+          "loop": true
+        },
+        "bow": {
+          "row": 5,
+          "frames": 6,
+          "fps": 8,
+          "yoyo": true,
+          "hold": 0.6
+        },
+        "thank": {
+          "row": 6,
+          "frames": 4,
+          "fps": 6,
+          "yoyo": true,
+          "hold": 0.8
+        },
+        "stand_up": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8,
+          "reverse": true
+        }
+      }
+    },
+    "child": {
+      "src": "child.webp",
+      "seatH": 152,
+      "actions": {
+        "walk_back": {
+          "row": 0,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "walk_side": {
+          "row": 1,
+          "frames": 6,
+          "stride": 30,
+          "loop": true
+        },
+        "walk_front": {
+          "row": 2,
+          "frames": 6,
+          "stride": 22,
+          "loop": true
+        },
+        "sit_down": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8
+        },
+        "idle": {
+          "row": 4,
+          "frames": 1,
+          "loop": true
+        },
+        "bow": {
+          "row": 5,
+          "frames": 6,
+          "fps": 8,
+          "yoyo": true,
+          "hold": 0.6
+        },
+        "thank": {
+          "row": 6,
+          "frames": 4,
+          "fps": 6,
+          "yoyo": true,
+          "hold": 0.8
+        },
+        "stand_up": {
+          "row": 3,
+          "frames": 5,
+          "fps": 8,
+          "reverse": true
+        }
+      }
+    }
+  }
+}

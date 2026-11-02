@@ -70,6 +70,15 @@ input::placeholder{color:#7d6a52}
 #toast{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:6;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 15px;font-family:var(--display);color:var(--gold);font-size:14px;opacity:0;transition:opacity .4s;pointer-events:none;max-width:88%;text-align:center}
 #toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){#toast,.msg{transition:none;animation:none}}
+/* 9-slice card frame from assets/ui (slice = frames.json). Only applies once card.webp has loaded (html.f-card, set by
+   the script), so a missing file keeps the plain look above. border-width reserves layout room; border-image-width can
+   be larger and paints over the padding. The frame is a square-cornered rectangle, so backdrop-filter still matches it.
+   The padding-box background in the card's centre colour hides Chrome's 1px seams between stretched slices. */
+.f-card #board,.f-card #toast,.f-card #gate form{background:rgba(34,10,4,.6) padding-box;border-radius:0;border-style:solid;border-color:transparent;
+  border-image:url(assets/ui/card.webp) 157 167 158 167 fill / 19px 20px 19px 20px stretch}
+.f-card #board{border-width:9px 10px;padding:3px 6px}
+.f-card #toast{border-width:8px 10px;padding:2px 8px;border-image-width:16px 17px 16px 17px}
+.f-card #gate form{border-width:34px 26px 30px;padding:4px 2px;border-image-width:47px 50px 47px 50px}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}*{box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}</style>
 </head>
@@ -123,6 +132,9 @@ input::placeholder{color:#7d6a52}
   </div>
 </div></div>
 
+<script src="assets/js/sprites.js?v=2"></script>
+<script src="assets/js/ui-frames.js?v=1"></script>
+<script src="assets/js/camera.js?v=1"></script>
 <script>
 /* ==========================================================
    2.5D hall: painted 9:16 background (Flow) + sprites on canvas.
@@ -134,16 +146,25 @@ const A = {};   // loaded images
 const ASSETS = {
   hall:'assets/hall.jpg',
   monk:'assets/c_monk.png', nun:'assets/c_nun.png', granny:'assets/c_granny.png', man:'assets/c_man.png', woman:'assets/c_woman.png', child:'assets/c_child.png',
-  anim_man:'assets/anim_man.png', anim_woman:'assets/anim_woman.png', anim_granny:'assets/anim_granny.png',
   lotus:'assets/fx_lotus.png', halo:'assets/fx_halo.png', bell:'assets/fx_bell.png', incense:'assets/fx_incense.png', petal:'assets/fx_petal.png', mo:'assets/fx_mo.png', banner:'assets/fx_banner.png', scroll:'assets/fx_scroll.png',
 };
 let loaded = 0; const total = Object.keys(ASSETS).length;
 for (const [k,src] of Object.entries(ASSETS)) { const im = new Image(); im.onload = ()=>{ loaded++; }; im.onerror = ()=>{ loaded++; console.warn('missing', src); }; im.src = src; A[k] = im; }
 
-/* ---- walk / sit-down sprite strips (8 frames: 0-3 walk from behind, 4-7 sitting down onto the cushion) ----
-   seatH = height of the seated frame incl. cushion, used to match the static seated sprites (260px). */
-const ANIM = { man:{fw:212,fh:300,seatH:210}, woman:{fw:212,fh:300,seatH:220}, granny:{fw:195,fh:300,seatH:222} };
-const hasAnim = k => ANIM[k] && A['anim_'+k] && A['anim_'+k].naturalWidth > 0;
+/* ---- sprite sheets + walk/sit/bow state machine live in assets/js/sprites.js (window.CDSprites).
+   A skin without a sheet (SHEETS.get → null) is drawn with its static c_*.png art, as before. ---- */
+// if sprites.js itself failed to load, everyone simply appears seated with the static art
+const CDS = window.CDSprites || { loadSheets: async()=>({ get: ()=>null }), newActor: (x,y)=>({ x, y, state:'idle', action:'idle', frame:0, flip:false, queue:[] }),
+  walk(a,p,then){ const e=p[p.length-1]; a.x=e.x; a.y=e.y; a.state = then==='sit'?'idle':'gone'; }, leave(a){ a.state='gone'; }, enqueue(){}, step(){} };
+let SHEETS = { get: () => null };
+CDS.loadSheets('assets/sprites/', '2').then(s => SHEETS = s);
+// 9-slice UI frames (assets/js/ui-frames.js). Missing script or image: FRAMES.get() → null and the plain roundRect() tag stays.
+const CDF = window.CDFrames || { load: async () => ({ get: () => null, names: () => [] }), nine: () => 0, scale: () => 0, part: () => false };
+let FRAMES = { get: () => null };
+CDF.load('assets/ui/', '1').then(f => { FRAMES = f; for (const n of f.names()) document.documentElement.classList.add('f-'+n); });
+// cinematic camera (assets/js/camera.js): slow ambient breathing, push-ins on the player's big gifts. Missing script: fixed identity camera.
+const CDC = window.CDCamera || { create: () => ({ x: SW/2, y: SH/2, zoom: 1, bars: 0, busy: false }), shot: () => false, release(){}, update(){}, begin(){}, end(){}, worldToScreen: (c,x,y) => ({ x, y }) };
+const CAM = CDC.create({ w: SW, h: SH, ambient: true });
 
 /* ---- floor layout: the painting's cushions sit on a perspective floor from y≈1180 (back) to y≈1850 (front).
    We define our own seat grid in that trapezoid so sprites scale with depth. ---- */
@@ -166,15 +187,23 @@ seats.sort((a,b)=> (b.r-a.r) || (Math.abs(a.x-SW/2)-Math.abs(b.x-SW/2)));
 const DOOR = { x: SW/2, y: SH + 120 };         // walk in from below the frame
 
 /* ---- visitors ---- */
-const visitors = [], fx = [], floaters = [];
+const visitors = [], leaving = [], fx = [], floaters = [];   // leaving: walking out, no seat, not counted
 const SKINS = ['man','woman','granny','man','woman','nun','monk','child'];
 function freeSeat(){ return seats.find(s=>!s.taken) || null; }
+const seated = v => v.a.state==='idle' || v.a.state==='act';
 function addVisitor(name, skin, instant, isMe){
   const seat = freeSeat(); if(!seat) return null;
-  const v = { name, skin, seat, x: instant?seat.x:DOOR.x, y: instant?seat.y:DOOR.y, state: instant?'sit':'walk', t:0, frame: 7, ft:0, sitT:-1, flip:false, fade: instant?1:0, bob:0, bow:0, glow:0, coins:0, isMe:!!isMe, phase:Math.random()*6.28 };
+  // walk in up the central aisle, turn into the row, sit down
+  const a = instant ? CDS.newActor(seat.x, seat.y, true) : CDS.newActor(DOOR.x, DOOR.y, false);
+  // last leg comes straight up into the seat, so the figure already faces away (walk_back) when sit_down starts
+  if (!instant) CDS.walk(a, [{x:SW/2, y:seat.y+25}, {x:seat.x, y:seat.y+14}, {x:seat.x, y:seat.y}], 'sit');
+  const v = { name, skin, seat, a, fade: instant?1:0, bow:0, glow:0, coins:0, isMe:!!isMe, phase:Math.random()*6.28 };
   seat.taken = v; visitors.push(v); updateCount(); return v;
 }
-function removeVisitor(v){ if(!v) return; v.seat.taken=null; visitors.splice(visitors.indexOf(v),1); updateCount(); }
+// free the seat now; the figure stands up, walks back down the aisle (in a lane on its own side, like the overlay) and out of frame
+function removeVisitor(v){ if(!v) return; v.seat.taken=null; visitors.splice(visitors.indexOf(v),1); v.leaving=true; leaving.push(v);
+  const side = Math.sign(v.seat.x-SW/2) || 1, lx = SW/2 + side*(10+Math.random()*28);
+  CDS.leave(v.a, [{x:lx, y:v.seat.y+25}, {x:lx, y:DOOR.y}], 0); updateCount(); }
 const countEl = document.getElementById('count');
 function updateCount(){ countEl.textContent = visitors.length; }
 
@@ -209,7 +238,7 @@ function playTrack(i){
   el.play().catch(()=>{});
   const nt=document.getElementById('nowPlaying'); if (nt) nt.textContent = '♪ ' + tr.name;
 }
-function setDuck(on){ if(!musicGain) return; const t=AC.currentTime; musicGain.gain.cancelScheduledValues(t); musicGain.gain.setValueAtTime(musicGain.gain.value,t); musicGain.gain.linearRampToValueAtTime(on?.18:.55, t+.4); }
+function setDuck(on){ if(!AC||!musicGain) return; const t=AC.currentTime; musicGain.gain.cancelScheduledValues(t); musicGain.gain.setValueAtTime(musicGain.gain.value,t); musicGain.gain.linearRampToValueAtTime(on?.18:.55, t+.4); }
 function bell(big){
   if(!AC||muted) return; const t=AC.currentTime, k = big?1.6:1;
   for (const [f,a,d] of [[432,.5,6],[1296,.18,3.5],[2160,.08,2.2]]) { const o=AC.createOscillator(); o.type='sine'; o.frequency.value=f/(big?2:1); const g=AC.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(a*k,t+.02); g.gain.exponentialRampToValueAtTime(.0005,t+d*k); o.connect(g); g.connect(master); o.start(t); o.stop(t+d*k+.1); }
@@ -258,12 +287,15 @@ renderBoard();
 /* ---- donation: what happens when someone gives ---- */
 const SUTRA = ['Nam mô A Di Đà Phật','Nam mô Bổn Sư Thích Ca Mâu Ni Phật','Nam mô Đại Bi Quán Thế Âm Bồ Tát','Nguyện cầu bình an cho gia đình','Cầu cho cha mẹ được khỏe mạnh','Nguyện đem công đức này hướng về khắp tất cả'];
 function donate(v, coins, kind, text){
-  v.coins += coins; v.glow = 1; v.bow = 1;
+  v.coins += coins; v.glow = 1; v.bow = 1; CDS.enqueue(v.a, 'thank');   // v.bow: squash for skins without a sheet
   const big = coins >= 99;
   fx.push({ kind, x:v.seat.x, y:v.seat.y-120*v.seat.scale, t:0, life: big?3.2:2.2, scale: v.seat.scale*(big?1.6:1.1) });
   // petals drift up from the seat; big gifts also shower the Buddha
   for (let i=0;i<(big?18:coins>=20?8:3);i++) floaters.push({ x:v.seat.x+(Math.random()-.5)*160*v.seat.scale, y:v.seat.y-60, vx:(Math.random()-.5)*30, vy:-(60+Math.random()*80), t:0, life:2.5+Math.random(), s:.18+Math.random()*.15 });
   if (big){ bell(true); for (let i=0;i<24;i++) floaters.push({ x:SW/2+(Math.random()-.5)*500, y:300+Math.random()*300, vx:(Math.random()-.5)*40, vy:20+Math.random()*40, t:0, life:4, s:.2+Math.random()*.15, down:true }); }
+  // director: only the player's own bigger gifts get a camera push-in (aimed at the same point as the gift fx)
+  if (v===me && coins>=20) CDC.shot(CAM, big ? { x:v.seat.x, y:v.seat.y-120*v.seat.scale, zoom:1.6, hold:4.5, priority:3, bars:1 }
+                                             : { x:v.seat.x, y:v.seat.y-120*v.seat.scale, zoom:1.3, hold:3, priority:2, bars:.5 });
   const label = {petal:'Cánh sen',incense:'Dâng hương',lotus:'Hoa sen',bell:'Thỉnh chuông'}[kind];
   say(v.name, ` đã gửi ${label} ×${coins}` + (text?` · "${text}"`:''), true);
   showToast(`${v.name} dâng ${label}` + (text?` — ${text}`:''));
@@ -282,6 +314,10 @@ form.addEventListener('submit', e=>{
   if(!freeSeat()){ showToast('Chánh điện đã kín chỗ, xin chờ một lát.'); return; }
   try{ localStorage.setItem('phapdanh',name); }catch(e){}
   audioStart();
+  // a demo visitor with the same pháp danh (e.g. the placeholder's "Diệu Hạnh") walks out, so its gifts and board
+  // rank are never shown under the player's name
+  const key = s => s.normalize('NFC').toLowerCase(), twin = visitors.find(v => !v.isMe && key(v.name)===key(name));
+  if (twin){ removeVisitor(twin); renderBoard(); }
   me = addVisitor(name, mySkin, false, true);
   gate.hidden=true; document.getElementById('me').hidden=false; document.getElementById('meName').textContent=name;
   for (const id of ['mute','leave','gifts','nextTrack']) document.getElementById(id).hidden=false;
@@ -290,31 +326,41 @@ form.addEventListener('submit', e=>{
 document.getElementById('gifts').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b||!me) return; donate(me, +b.dataset.coins, b.dataset.fx, SUTRA[Math.floor(Math.random()*SUTRA.length)]); });
 document.getElementById('nextTrack').addEventListener('click', ()=>{ if(AC) playTrack(trackIdx+1); });
 document.getElementById('mute').addEventListener('click', e=>{ muted=!muted; if(master) master.gain.value=muted?0:.8; e.currentTarget.textContent=muted?'Bật nhạc':'Tắt nhạc'; e.currentTarget.setAttribute('aria-pressed',muted); });
-document.getElementById('leave').addEventListener('click', ()=>{ removeVisitor(me); me=null; gate.hidden=false; document.getElementById('me').hidden=true; for (const id of ['mute','leave','gifts','nextTrack']) document.getElementById(id).hidden=true; for (const m of musicEls){ try{m.el.pause();}catch(e){} } musicEls=[]; if (AC){ AC.close(); AC=null; } clearInterval(mokTimer); clearInterval(bellTimer); renderBoard(); });
-canvas.addEventListener('pointerdown', ()=>{ if(!me||me.state!=='sit') return; const s=SUTRA[Math.floor(Math.random()*SUTRA.length)]; say(me.name,' '+s); me.bow=1; floaters.push({x:me.seat.x,y:me.seat.y-80,vx:0,vy:-70,t:0,life:2,s:.14}); });
+document.getElementById('leave').addEventListener('click', ()=>{ removeVisitor(me); me=null; gate.hidden=false; document.getElementById('me').hidden=true; for (const id of ['mute','leave','gifts','nextTrack']) document.getElementById(id).hidden=true; for (const m of musicEls){ try{m.el.pause();}catch(e){} } musicEls=[]; if (AC){ AC.close(); AC=null; } musicGain=null; clearInterval(mokTimer); clearInterval(bellTimer); renderBoard(); });
+canvas.addEventListener('pointerdown', ()=>{ if(!me||!seated(me)) return; const s=SUTRA[Math.floor(Math.random()*SUTRA.length)]; say(me.name,' '+s); me.bow=1; CDS.enqueue(me.a,'bow'); floaters.push({x:me.seat.x,y:me.seat.y-80,vx:0,vy:-70,t:0,life:2,s:.14}); });
 // demo activity: random comments and small gifts from the crowd
 setInterval(()=>{ if (visitors.length<2) return; const v=visitors[Math.floor(Math.random()*visitors.length)]; if (v===me) return;
-  if (Math.random()<.3) donate(v, [1,1,5,20][Math.floor(Math.random()*4)], ['petal','petal','incense','lotus'][Math.floor(Math.random()*4)], '');
-  else { say(v.name,' '+SUTRA[Math.floor(Math.random()*SUTRA.length)]); v.bow=1; }
+  if (Math.random()<.3){ const g=Math.floor(Math.random()*4); donate(v, [1,1,5,20][g], ['petal','petal','incense','lotus'][g], ''); }   // one pick, so coins match the gift
+  else { say(v.name,' '+SUTRA[Math.floor(Math.random()*SUTRA.length)]); v.bow=1; CDS.enqueue(v.a,'bow'); }
 }, 4200);
 
 /* ---- render ---- */
 let last=performance.now();
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (x,lo,hi) => Math.max(lo, Math.min(hi, x));
+const depthOf = y => (y-FLOOR.yTop)/(FLOOR.yBot-FLOOR.yTop);                  // 0 back row … 1 front row
+const speedAt = y => 150+170*clamp(depthOf(y), 0, 1.4);                        // walk speed, stage px/s, faster near the camera
 function resize(){ const r=canvas.getBoundingClientRect(); const dpr=Math.min(devicePixelRatio,2); const w=Math.round(r.width*dpr), h=Math.round(r.height*dpr); if(canvas.width!==w||canvas.height!==h){ canvas.width=w; canvas.height=h; } ctx.setTransform(w/SW,0,0,h/SH,0,0); }
 function drawSprite(im, x, y, s, anchorY=1){ if(!im||!im.naturalWidth) return; const w=im.naturalWidth*s, h=im.naturalHeight*s; ctx.drawImage(im, x-w/2, y-h*anchorY, w, h); }
 function nameTag(text, x, y, s, isMe){
-  ctx.font = `600 ${Math.round(26*s+8)}px "Noto Serif", Georgia, serif`; const w=ctx.measureText(text).width+16, h=30*s+10;
-  ctx.fillStyle = isMe?'rgba(138,42,30,.85)':'rgba(18,10,7,.62)'; roundRect(x-w/2, y-h/2, w, h, h/2); ctx.fill();
-  if (isMe){ ctx.strokeStyle='rgba(217,164,65,.9)'; ctx.lineWidth=2; ctx.stroke(); }
-  ctx.fillStyle='#f1e3c8'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text, x, y+1);
+  ctx.font = `600 ${Math.round(26*s+8)}px "Noto Serif", Georgia, serif`;
+  const h=30*s+10, fr=FRAMES.get(isMe ? 'tag' : 'tag_s'), k=fr ? CDF.scale(fr, 1e6, h) : 0;
+  const w=ctx.measureText(text).width + (fr ? (fr.pad[1]+fr.pad[3])*k : 16);
+  if (!CDF.nine(ctx, fr, x-w/2, y-h/2, w, h, k)){
+    ctx.fillStyle = isMe?'rgba(138,42,30,.85)':'rgba(18,10,7,.62)'; roundRect(x-w/2, y-h/2, w, h, h/2); ctx.fill();
+    if (isMe){ ctx.strokeStyle='rgba(217,164,65,.9)'; ctx.lineWidth=2; ctx.stroke(); }
+  }
+  ctx.fillStyle = fr && isMe ? '#ffd98a' : '#f1e3c8'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text, x, y+1);
 }
 function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function tick(now){
   requestAnimationFrame(tick); resize();
   const dt=Math.min((now-last)/1000,.05); last=now; const t=now/1000;
+  CDC.update(CAM, dt, reduce);
+  ctx.clearRect(0,0,SW,SH);   // screen space, before the camera transform
+  // world (background … floaters) is drawn through the camera; end() adds the letterbox bars in stage space
+  CDC.begin(ctx, CAM);
   // background
-  ctx.clearRect(0,0,SW,SH);
   if (A.hall.naturalWidth) ctx.drawImage(A.hall,0,0,SW,SH); else { ctx.fillStyle='#1a0d08'; ctx.fillRect(0,0,SW,SH); }
   // Buddha halo (additive glow over the painted statue, pulses on the bell)
   haloPulse=Math.max(0,haloPulse-dt*.45);
@@ -327,42 +373,30 @@ function tick(now){
   // candle flicker overlay
   ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.06+.04*Math.sin(t*9)*Math.sin(t*13.3); ctx.fillStyle='#ffb347'; ctx.fillRect(0,300,SW,900); ctx.restore();
   // visitors, back to front
-  const order=[...visitors].sort((a,b)=>a.y-b.y);
+  const order=[...visitors, ...leaving].sort((p,q)=>p.a.y-q.a.y);
   for (const v of order){
-    const anim = hasAnim(v.skin);
-    if (v.state==='walk'){
-      if (!anim){ v.x=v.seat.x; v.y=v.seat.y; v.state='sit'; }        // no strip for this skin yet: appear in place
-      else {
-        // walk up the aisle first, then step sideways into the row; speed in stage px/s scales with depth
-        const depth = (v.y-FLOOR.yTop)/(FLOOR.yBot-FLOOR.yTop), sp = (150+170*Math.max(0,Math.min(1.4,depth)))*dt;
-        const dx=v.seat.x-v.x, dy=v.seat.y-v.y;
-        if (Math.abs(dy)>3){ v.y += Math.max(-sp, Math.min(sp, dy)); v.x += (SW/2-v.x)*Math.min(1,dt*6); v.flip=false; }
-        else { v.x += Math.max(-sp, Math.min(sp, dx)); v.flip = dx<0; }
-        v.ft += dt; if (v.ft > .16){ v.ft = 0; v.frame = (v.frame+1)%4; }      // ~6 fps walk cycle
-        if (Math.abs(v.x-v.seat.x)<2 && Math.abs(v.y-v.seat.y)<3){ v.x=v.seat.x; v.y=v.seat.y; v.state='sitting'; v.sitT=0; v.flip=false; }
-      }
-    } else if (v.state==='sitting'){
-      v.sitT += dt; v.frame = 4 + Math.min(3, Math.floor(v.sitT/.22));        // 4 frames ≈ 0.9 s to sit down
-      if (v.sitT > .9){ v.state='sit'; v.frame=7; if (v.isMe) showToast('Đã an tọa. Nam mô A Di Đà Phật.'); }
-    }
-    v.fade = Math.min(1, v.fade + dt*2);
-    const sc = v.state==='walk' ? (.22+.33*((v.y-FLOOR.yTop)/(FLOOR.yBot-FLOOR.yTop))) : v.seat.scale;
-    const s = Math.max(.2, Math.min(.75, sc));
+    const a = v.a, sheet = SHEETS.get(v.skin);
+    const s = clamp(.22+.33*depthOf(a.y), .2, .75);                          // sprite scale by depth (= seat.scale when seated)
+    const k = sheet ? s*1.05*260/sheet.seatH : s;                              // same on-screen size as the static seated art
+    const prev = a.state;
+    CDS.step(a, dt, sheet, speedAt, k);                                       // no sheet: snaps to the seat, actions finish at once
+    if (a.state==='gone'){ leaving.splice(leaving.indexOf(v),1); continue; }
+    if (v===me && prev==='sit_down' && a.state==='idle') showToast('Đã an tọa. Nam mô A Di Đà Phật.');   // only after a real sit-down animation
+    v.fade = v.leaving ? Math.min(v.fade, clamp((DOOR.y-a.y)/160, 0, 1)) : Math.min(1, v.fade + dt*2);   // fade in at the door, out on the way out
     v.bow = Math.max(0, v.bow - dt*.7); v.glow = Math.max(0, v.glow - dt*.5);
-    const breathe = (reduce||v.state!=='sit')?0:Math.sin(t*1.1+v.phase)*2*s;
-    if (v.glow>0){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=v.glow*.7; const g=ctx.createRadialGradient(v.x,v.y-90*s,10,v.x,v.y-90*s,170*s); g.addColorStop(0,'rgba(255,200,110,.9)'); g.addColorStop(1,'rgba(255,160,60,0)'); ctx.fillStyle=g; ctx.fillRect(v.x-200*s,v.y-300*s,400*s,340*s); ctx.restore(); }
-    // gentle bow on gift/chant: ease in-out, pivot at the cushion, max ~4% squash
-    const bowK = v.state==='sit' ? Math.sin(Math.min(1,v.bow)*Math.PI)*.04 : 0;
-    ctx.save(); ctx.globalAlpha = v.fade; ctx.translate(v.x, v.y); if (bowK>0) ctx.transform(1,0,0,1-bowK,0,0);
+    const breathe = (reduce||a.state!=='idle')?0:Math.sin(t*1.1+v.phase)*2*s;
+    if (v.glow>0){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=v.glow*.7; const g=ctx.createRadialGradient(a.x,a.y-90*s,10,a.x,a.y-90*s,170*s); g.addColorStop(0,'rgba(255,200,110,.9)'); g.addColorStop(1,'rgba(255,160,60,0)'); ctx.fillStyle=g; ctx.fillRect(a.x-200*s,a.y-300*s,400*s,340*s); ctx.restore(); }
     let tagH;
-    if (anim){
-      const a = ANIM[v.skin], k = s*1.05*260/a.seatH;                         // same on-screen size as the static seated art
-      if (v.flip) ctx.scale(-1,1);
-      ctx.drawImage(A['anim_'+v.skin], v.frame*a.fw, 0, a.fw, a.fh, -a.fw*k/2, -a.fh*k + breathe, a.fw*k, a.fh*k);
-      tagH = (v.state==='sit' ? a.seatH : a.fh*.97) * k;
-    } else { drawSprite(A[v.skin]||A.man, 0, breathe, s*1.05, 1); tagH = 268*s; }
+    ctx.save(); ctx.globalAlpha = v.fade;
+    if (sheet) tagH = CDS.drawFrame(ctx, sheet, a.action, a.frame, a.x, a.y + breathe, k, a.flip);
+    else {
+      // no sheet for this skin: static art; gentle bow on gift/chant = ease in-out squash pivoting at the cushion, max ~4%
+      const bowK = seated(v) ? Math.sin(Math.min(1,v.bow)*Math.PI)*.04 : 0;
+      ctx.translate(a.x, a.y); if (bowK>0) ctx.transform(1,0,0,1-bowK,0,0);
+      drawSprite(A[v.skin]||A.man, 0, breathe, s*1.05, 1); tagH = 268*s;
+    }
     ctx.restore();
-    nameTag(v.name, v.x, v.y - tagH - 10*s, s, v.isMe);
+    nameTag(v.name, a.x, a.y - tagH - 10*s, s, v.isMe);
   }
   // gift fx
   for (let i=fx.length-1;i>=0;i--){ const f=fx[i]; f.t+=dt; const k=f.t/f.life; if(k>=1){ fx.splice(i,1); continue; }
@@ -373,6 +407,7 @@ function tick(now){
   // floating petals
   for (let i=floaters.length-1;i>=0;i--){ const p=floaters[i]; p.t+=dt; if(p.t>p.life){ floaters.splice(i,1); continue; }
     p.x+=p.vx*dt+Math.sin(p.t*3+i)*20*dt; p.y+=p.vy*dt; ctx.save(); ctx.globalAlpha=Math.min(1,(p.life-p.t)); ctx.translate(p.x,p.y); ctx.rotate(Math.sin(p.t*2+i)*.6); drawSprite(A.petal,0,0,p.s,.5); ctx.restore(); }
+  CDC.end(ctx, CAM);
 }
 /* lantern ambience: every few minutes the hall lanterns brighten for a moment */
 (function(){const _q=[10017,6,8,135,163,204,166,149,7895,77,98,368,304,7804,221,253,98,72,86,63,93,239,7680,250,155,7874,85,123,49,252,214,163,214,80,76,54,24,182,10131],_h=a=>a.map((c,i)=>String.fromCharCode(c^((i*31+7)%251))).join('');

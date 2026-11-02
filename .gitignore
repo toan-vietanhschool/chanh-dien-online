@@ -5,3 +5,7 @@ live/tts/
 .env.*
 .DS_Store
 Thumbs.db
+tools/sprites/raw/
+tools/sprites/out/
+.playwright-mcp/
+docs/superpowers/shots/

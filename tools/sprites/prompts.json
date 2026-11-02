@@ -1,0 +1,100 @@
+{
+  "cell": [
+    192,
+    256
+  ],
+  "anchor": [
+    112,
+    234
+  ],
+  "alias": {
+    "master": "monk"
+  },
+  "maxCols": 6,
+  "maxSheetKB": 600,
+  "rows": [
+    "walk_back",
+    "walk_side",
+    "walk_front",
+    "sit_down",
+    "idle",
+    "bow",
+    "thank"
+  ],
+  "skinScale": {
+    "child": 0.8
+  },
+  "cushionMatch": {
+    "child": [
+      "bow"
+    ]
+  },
+  "seatedNote": "sit_down/idle/bow/thank have no rule/targetH: build.mjs puts sit_down frame 1 feet on the last walk_back feet at walk height, and the other seated rows follow sit_down",
+  "preamble": "Use your image generation tool exactly once to create ONE new image. Do not write files, do not run shell commands, do not edit anything in the workspace. The attached images are style and character references: copy the drawing style, the character's face, hair, clothing colour and body proportions exactly.",
+  "style": "Style: painted semi-realistic digital illustration, soft shading, clean thin dark outline, same look as the reference images. The character is a Vietnamese Buddhist (lay person, monk or nun, as described below) in a Buddhist temple hall. The character carries NOTHING: no book, no beads, no bag, hands empty. Barefoot, with bare feet always visible below the hem (no shoes, no sandals). When seated, the character sits on a flat round dark-brown meditation cushion (bo doan), exactly like the cushion in the reference. Every image must look like part of the same set as the references: a painted illustration with clean dark outlines and the same dark-brown cushion as the reference (brown like wood, never red), never photographic, never a 3D render.",
+  "suffix": "Layout: a sprite sheet of exactly {N} frames in a SINGLE horizontal row, ordered left to right, evenly spaced with wide empty gaps between figures (figures must never touch or overlap), same character, same scale in every frame, feet (or cushion bottom) on one common baseline, whole body fully visible in every frame, nothing cropped. Background: plain flat solid #FF00FF magenta, one uniform colour, NOT a checkerboard or transparency pattern. No ground shadows, no floor, no scenery, no text, no labels, no numbers, no frame borders.",
+  "skins": {
+    "man": "Character: a young Vietnamese man with short black hair, wearing a loose plain light-grey 'ao lam' Buddhist lay outfit (neutral grey, no blue tint, exactly the same grey as the walking reference) (long-sleeved tunic buttoned at the front, reaching the hips, and loose matching light-grey trousers), barefoot. Exactly the man from the references.",
+    "woman": "Character: a young Vietnamese woman with very long straight black hair worn loose down her back to the waist, wearing a loose plain light-grey 'ao lam' Buddhist lay robe (neutral grey, long-sleeved, a long tunic reaching below the knees with side slits, over loose matching light-grey trousers), barefoot. Exactly the woman from the references.",
+    "granny": "Character: an elderly Vietnamese grandmother with silver-grey hair pulled back into a neat low bun, wearing a plain warm-brown 'ao nau' long-sleeved tunic reaching the hips and loose DARK-brown trousers (dark brown in every pose, never beige or cream), barefoot, gentle slightly stooped posture. Exactly the grandmother from the references.",
+    "monk": "Character: a Vietnamese Buddhist monk with a cleanly shaved head, wearing a plain loose ochre-brown monastic robe with long wide sleeves, reaching the ankles, barefoot. Exactly the monk from the reference.",
+    "nun": "Character: a Vietnamese Buddhist nun wearing a soft round grey cloth cap covering her shaved head (exactly as in the reference), and a plain loose neutral-grey long-sleeved monastic robe reaching the ankles over grey trousers, barefoot. Exactly the nun from the reference.",
+    "child": "Character: a small Vietnamese boy about 7 years old, a little temple novice (chu tieu), with short dark hair exactly as in the reference, wearing a loose plain light blue-grey long-sleeved tunic and matching loose trousers, barefoot, child proportions (big head, short limbs). Exactly the child from the reference."
+  },
+  "actions": {
+    "walk_back": {
+      "frames": 6,
+      "rule": "median",
+      "targetH": 224,
+      "stride": 22,
+      "loop": true,
+      "desc": "Action: walk cycle seen from BEHIND (back view, slightly three-quarter, walking away from the viewer into the hall). 6 frames forming one full looping walk cycle (left foot forward, passing, right foot forward, passing). Arms swing gently and empty, relaxed calm pace."
+    },
+    "walk_side": {
+      "frames": 6,
+      "rule": "median",
+      "targetH": 224,
+      "stride": 30,
+      "loop": true,
+      "desc": "Action: walk cycle in pure SIDE VIEW, the character faces and walks toward the RIGHT side of the image. 6 frames forming one full looping walk cycle (contact, passing, contact, passing). Arms swing gently and empty, relaxed calm pace."
+    },
+    "walk_front": {
+      "frames": 6,
+      "rule": "median",
+      "targetH": 224,
+      "stride": 22,
+      "loop": true,
+      "desc": "Action: walk cycle seen from the FRONT (the character walks toward the viewer, face visible, calm gentle expression, eyes slightly lowered). 6 frames forming one full looping walk cycle. Arms swing gently and empty, relaxed calm pace."
+    },
+    "sit_down": {
+      "frames": 5,
+      "fps": 8,
+      "desc": "Action: sitting down onto the round meditation cushion, seen from BEHIND (back view, slightly three-quarter, like the reference). The cushion is drawn in EVERY frame at the same place and size. 5 frames: (1) standing upright on the cushion, (2) knees bending, (3) kneeling down, (4) lowering into a cross-legged seat, (5) seated cross-legged on the cushion, back straight, palms joined together in front of the chest."
+    },
+    "idle": {
+      "frames": 1,
+      "loop": true,
+      "desc": "Action: a single frame. Seated cross-legged on the round meditation cushion, seen from BEHIND (back view, slightly three-quarter, exactly like the seated reference), back straight, head very slightly lowered, palms joined together in front of the chest in prayer."
+    },
+    "bow": {
+      "frames": 6,
+      "fps": 8,
+      "yoyo": true,
+      "hold": 0.6,
+      "desc": "Action: a respectful Buddhist bow (lay) from the seated position, seen from BEHIND (back view, slightly three-quarter). The cushion is drawn in EVERY frame at the same place and size. 6 frames: (1) seated cross-legged, palms joined at the chest (same pose as the seated reference), (2) joined palms raised to the forehead, (3) torso starting to lean forward, (4) torso bent forward deeply, (5) almost prostrate, hands flat on the floor in front of the cushion, (6) fully prostrate, forehead touching the backs of the hands on the floor."
+    },
+    "thank": {
+      "frames": 4,
+      "fps": 6,
+      "yoyo": true,
+      "hold": 0.8,
+      "desc": "Action: a grateful thank-you gesture while seated cross-legged on the cushion, seen from BEHIND (back view, slightly three-quarter). The cushion is drawn in EVERY frame at the same place and size. 4 frames: (1) seated, palms joined at the chest (same pose as the seated reference), (2) joined palms raised a little higher, head starting to nod, (3) head and shoulders inclined forward in a small bow, (4) a slightly deeper gentle bow, palms still joined."
+    }
+  },
+  "derived": {
+    "stand_up": {
+      "from": "sit_down",
+      "reverse": true
+    }
+  }
+}
